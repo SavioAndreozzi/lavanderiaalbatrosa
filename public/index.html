@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AERONAUTICA MILITARE - Grigliato Lavanderia 28° Corso Albatros A</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="/vendor/jszip.min.js"></script>
+    <script src="/excel-export.js"></script>
+    
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        am: {
+                            navy: '#0B1E36',
+                            header: '#0F2B5C',
+                            blue: '#1E40AF',
+                            light: '#EFF6FF',
+                            gold: '#D97706',
+                            goldlight: '#FBBF24',
+                            golddark: '#B45309',
+                            red: '#991B1B'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Personalizzazione Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        /* Stili Tabella Excel */
+        .excel-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 0.80rem;
+        }
+
+        .excel-table th, .excel-table td {
+            border-right: 1px solid #cbd5e1;
+            border-bottom: 1px solid #cbd5e1;
+            padding: 0.35rem 0.5rem;
+            white-space: nowrap;
+        }
+
+        .excel-table th {
+            background-color: #1e293b;
+            color: #ffffff;
+            font-weight: 700;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        /* Sticky Columns per Cognome e Nome */
+        .excel-table .sticky-col-1 {
+            position: sticky;
+            left: 0;
+            z-index: 20;
+            background-color: #ffffff;
+        }
+        .excel-table .sticky-col-2 {
+            position: sticky;
+            left: 55px;
+            z-index: 20;
+            background-color: #ffffff;
+        }
+        .excel-table .sticky-col-3 {
+            position: sticky;
+            left: 175px;
+            z-index: 20;
+            background-color: #ffffff;
+            box-shadow: 2px 0 5px -2px rgba(0,0,0,0.15);
+        }
+
+        .excel-table th.sticky-col-1, 
+        .excel-table th.sticky-col-2, 
+        .excel-table th.sticky-col-3 {
+            z-index: 30;
+            background-color: #0f172a;
+        }
+
+        .excel-table tr:hover td {
+            background-color: #e0f2fe !important;
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] { -moz-appearance: textfield; }
+
+        .badge-count { transition: all 0.2s ease; }
+
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased h-full flex flex-col font-sans overflow-hidden">
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none"></div>
+
+    <!-- Header Istituzionale AM -->
+    <header class="bg-am-navy text-white shadow-md border-b-4 border-amber-500 shrink-0">
+        <div class="max-w-full px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-amber-500/20 rounded-lg border border-amber-400/40 flex items-center justify-center shrink-0">
+                    <svg class="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 2L3 7v6c0 5.25 3.75 10 9 11 5.25-1 9-5.75 9-11V7l-9-5z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 6l2.5 5 5.5.8-4 3.9 1 5.5-5-2.6-5 2.6 1-5.5-4-3.9 5.5-.8z"/>
+                    </svg>
+                </div>
+                <div>
+                    <div class="text-[10px] font-black uppercase tracking-widest text-amber-400">Scuola Marescialli AM - Comando Corsi</div>
+                    <h1 class="text-sm sm:text-base font-extrabold tracking-tight">SERVIZIO LAVANDERIA - 28° CORSO PG ALBATROS A</h1>
+                </div>
+            </div>
+
+            <!-- Contatori veloci e tab bar -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <div class="hidden md:flex items-center gap-3 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-white/10 text-xs">
+                    <div><span class="text-slate-400">Inseriti:</span> <strong id="stat-inserted-count" class="text-amber-400 font-mono">0</strong>/101</div>
+                    <div class="h-3 w-px bg-slate-700"></div>
+                    <div><span class="text-slate-400">Tot. Capi:</span> <strong id="stat-total-items" class="text-blue-300 font-mono">0</strong></div>
+                </div>
+
+                <div class="flex bg-slate-900/80 p-1 rounded-xl border border-white/10">
+                    <button id="tab-form-btn" onclick="switchTab('form')" 
+                        class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                        Modulo
+                    </button>
+                    <button id="tab-table-btn" onclick="switchTab('table')" 
+                        class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300 hover:text-white">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        Grigliato Excel
+                        <span id="badge-total-records" class="bg-amber-400 text-slate-950 font-black text-[10px] px-1.5 py-0.2 rounded-full">0</span>
+                    </button>
+                    <button id="tab-manage-btn" onclick="switchTab('manage')" 
+                        class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300 hover:text-white">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        Gestione
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </header>
+
+    <div class="bg-blue-50 border-b border-blue-200 px-4 py-2 text-xs text-blue-950 flex flex-wrap items-center justify-between gap-2">
+        <span id="sync-status" role="status" aria-live="polite">Caricamento del grigliato condiviso…</span>
+        <div class="flex gap-3"><button onclick="switchTab('table')" class="font-bold underline">Vedi Excel</button><button onclick="exportToExcel()" class="font-bold underline">Scarica Excel aggiornato</button></div>
+    </div>
+    <!-- Main Content Box -->
+    <main class="flex-1 overflow-y-auto p-3 sm:p-5 max-w-full">
+
+        <!-- SCHEDA 1: MODULO INSERIMENTO -->
+        <div id="view-form" class="space-y-4 max-w-7xl mx-auto">
+            <form id="laundry-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
+                
+                <!-- Card Selezione Allievo -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 pb-2 border-b border-slate-100">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-md bg-am-navy text-white font-bold text-xs flex items-center justify-center">1</span>
+                            <h2 class="text-sm font-bold text-slate-900">Anagrafica Allievo M.llo (28° Corso Albatros A)</h2>
+                        </div>
+
+                        <!-- Ricerca e tendina 101 Allievi -->
+                        <div class="w-full sm:w-96 flex gap-2">
+                            <select id="select-student" onchange="onStudentSelect(this.value)" 
+                                class="w-full bg-amber-50 border border-amber-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 outline-none">
+                                <option value="">-- Seleziona Allievo dall'elenco (101 Allievi) --</option>
+                                <!-- Popolato da JS -->
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">CODICE ALLIEVO *</label>
+                            <input type="text" id="input-cod" required placeholder="Es. A01" oninput="onStudentCodeInput(this.value)"
+                                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none uppercase">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">COGNOME *</label>
+                            <input type="text" id="input-cognome" readonly placeholder="Compilato automaticamente"
+                                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none uppercase">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">NOME *</label>
+                            <input type="text" id="input-nome" readonly placeholder="Compilato automaticamente"
+                                class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-600 outline-none uppercase">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtro rapido indumenti -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex flex-col sm:flex-row items-center justify-between gap-2">
+                    <div class="relative w-full sm:w-72">
+                        <svg class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <input type="text" id="search-items-input" oninput="filterFormItems()" placeholder="Cerca indumento (es. Camicia, Slip...)" 
+                            class="w-full pl-8 pr-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white">
+                    </div>
+
+                    <div class="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0 text-xs">
+                        <button type="button" onclick="setCategoryFilter('all')" id="filter-all" class="px-2.5 py-1 rounded-md font-bold bg-slate-900 text-white shadow-sm whitespace-nowrap">
+                            Tutti (42)
+                        </button>
+                        <button type="button" onclick="setCategoryFilter('pezzo')" id="filter-pezzo" class="px-2.5 py-1 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap">
+                            Pezzo (19)
+                        </button>
+                        <button type="button" onclick="setCategoryFilter('peso')" id="filter-peso" class="px-2.5 py-1 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap">
+                            Peso (23)
+                        </button>
+                        <button type="button" onclick="setCategoryFilter('selected')" id="filter-selected" class="px-2.5 py-1 rounded-md font-bold bg-amber-100 text-amber-900 hover:bg-amber-200 whitespace-nowrap">
+                            Selezionati (<span id="count-selected-badge">0</span>)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SEZIONE 1: PEZZO -->
+                <div id="section-pezzo-container" class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                    <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 bg-blue-900 text-white text-[10px] font-black rounded uppercase">SEZIONE 1</span>
+                            <h3 class="text-xs font-bold text-slate-900">LAVATURA A PEZZO (19 Indumenti)</h3>
+                        </div>
+                        <span id="badge-tot-pezzo" class="text-xs font-bold text-blue-900 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                            Totale Pezzo: 0
+                        </span>
+                    </div>
+
+                    <div id="grid-pezzo" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                        <!-- Generato via JS -->
+                    </div>
+                </div>
+
+                <!-- SEZIONE 2: PESO -->
+                <div id="section-peso-container" class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                    <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 bg-teal-800 text-white text-[10px] font-black rounded uppercase">SEZIONE 2</span>
+                            <h3 class="text-xs font-bold text-slate-900">LAVATURA A PESO (23 Indumenti)</h3>
+                        </div>
+                        <span id="badge-tot-peso" class="text-xs font-bold text-teal-900 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
+                            Totale Peso: 0
+                        </span>
+                    </div>
+
+                    <div id="grid-peso" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                        <!-- Generato via JS -->
+                    </div>
+                </div>
+
+                <!-- BARRA INFERIORE DI RIEPILOGO E SALVATAGGIO -->
+                <div class="bg-slate-900 text-white rounded-xl p-3 shadow-lg flex flex-col items-center gap-3 sticky bottom-2 z-30 border border-slate-700">
+                    <div class="flex items-center gap-4 justify-center">
+                        <div>
+                            <div class="text-[9px] text-slate-400 font-bold uppercase">Totale Pezzo</div>
+                            <div id="summary-pezzo-count" class="text-lg font-black text-blue-400">0</div>
+                        </div>
+                        <div class="h-6 w-px bg-slate-700"></div>
+                        <div>
+                            <div class="text-[9px] text-slate-400 font-bold uppercase">Totale Peso</div>
+                            <div id="summary-peso-count" class="text-lg font-black text-teal-400">0</div>
+                        </div>
+                        <div class="h-6 w-px bg-slate-700"></div>
+                        <div>
+                            <div class="text-[9px] text-slate-400 font-bold uppercase">Totale Capi</div>
+                            <div id="summary-grand-total" class="text-xl font-black text-amber-400">0</div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-2 w-full">
+                        <button type="button" onclick="resetForm()" class="justify-self-start px-3 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-800 text-xs font-bold transition-all">
+                            Azzera
+                        </button>
+                        <button type="submit" id="submit-btn" class="px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow transition-all flex items-center justify-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            <span id="submit-btn-text">REGISTRA GRIGLIATO</span>
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- SCHEDA 2: TABELLA GRIGLIATO COMPLETO -->
+        <div id="view-table" class="hidden space-y-3 h-full flex flex-col">
+            
+            <!-- Barra Strumenti Tabella -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+                <div class="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                    <div class="relative w-full sm:w-60">
+                        <svg class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <input type="text" id="table-search-input" oninput="renderTable()" placeholder="Filtra per COD, Cognome..." 
+                            class="w-full pl-8 pr-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white">
+                    </div>
+
+                    <select id="sort-select" onchange="renderTable()" class="w-full sm:w-auto bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg px-2.5 py-1.5 outline-none focus:ring-2 focus:ring-blue-600">
+                        <option value="cod_asc">Ordina per: COD. (Crescente)</option>
+                        <option value="cognome_asc">Ordina per: Cognome (A-Z)</option>
+                        <option value="date_desc">Ordina per: Ultimi inseriti</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <button onclick="exportToExcel()" class="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-lg shadow transition-all flex items-center justify-center gap-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        Esporta Excel (.xlsx)
+                    </button>
+                    <button onclick="switchTab('form')" class="px-3.5 py-1.5 bg-am-navy hover:bg-blue-900 text-white text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                        Nuovo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Grigliato Excel Container -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden flex-1 flex flex-col">
+                <div class="overflow-auto flex-1 relative max-h-[70vh]">
+                    <table class="excel-table w-full">
+                        <thead>
+                            <tr>
+                                <th colspan="3" class="bg-slate-900 border-b border-slate-700 text-amber-400 uppercase text-[11px]">ALLIEVO MARESCIALLO</th>
+                                <th id="header-pezzo-count" colspan="19" class="bg-blue-950 border-b border-blue-800 text-blue-200 uppercase text-[11px]">LAVATURA A PEZZO (19)</th>
+                                <th id="header-peso-count" colspan="23" class="bg-teal-950 border-b border-teal-800 text-teal-200 uppercase text-[11px]">LAVATURA A PESO (23)</th>
+                                <th colspan="3" class="bg-slate-900 border-b border-slate-700 text-amber-400 uppercase text-[11px]">RIEPILOGO</th>
+                                <th class="bg-slate-900 border-b border-slate-700 text-white text-[10px]">AZIONI</th>
+                            </tr>
+                            <tr id="table-header-cols">
+                                <!-- Generato da JS -->
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Generato da JS -->
+                        </tbody>
+                        <tfoot id="table-footer" class="bg-slate-900 text-white font-bold sticky bottom-0 z-20">
+                            <!-- Generato da JS -->
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- SCHEDA 3: GESTIONE DATI E BACKUP -->
+        <div id="view-manage" class="hidden space-y-4 max-w-4xl mx-auto">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-6">
+                <div>
+                    <h2 class="text-base font-bold text-slate-900 border-b pb-2 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/></svg>
+                        Gestione Dati & Reset Settimanale
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">Strumenti di salvataggio, esportazione, ripristino e azzeramento per la gestione del servizio lavanderia.</p>
+                </div>
+
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs space-y-2">
+                    <p>Le modifiche sono condivise tra tutti i dispositivi. Il grigliato si aggiorna ogni 5 secondi; il download recupera gli ultimi dati salvati.</p>
+                    <p>Per recuperare dati inseriti prima di questo aggiornamento, apri questo sito dal browser usato in precedenza. L’importazione sostituisce il grigliato condiviso.</p>
+                    <button onclick="importPreviousBrowserData()" class="font-bold underline">Importa i dati precedenti da questo browser</button>
+                </div>
+                <!-- Sezione Reset Settimanale -->
+                <div class="bg-red-50 border border-red-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-red-950">Azzera / Reset Settimanale</h3>
+                        <p class="text-xs text-red-700 mt-0.5">Cancella tutti i dati inseriti per iniziare un nuovo ciclo settimanale di consegnino.</p>
+                    </div>
+                    <button onclick="openResetModal()" class="px-4 py-2 bg-red-700 hover:bg-red-800 text-white text-xs font-bold rounded-lg shadow shrink-0 transition-all">
+                        Reset Settimanale
+                    </button>
+                </div>
+
+                <!-- Backup & Restore JSON -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                    <div class="border border-slate-200 rounded-xl p-4 space-y-3 bg-slate-50">
+                        <h4 class="text-xs font-bold text-slate-800 uppercase">Esporta Backup Dati (JSON)</h4>
+                        <p class="text-[11px] text-slate-500">Scarica una copia di sicurezza completa da importare su altri dispositivi o conservare in archivio.</p>
+                        <button onclick="exportJSONBackup()" class="w-full py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-lg shadow transition-all">
+                            Scarica File Backup JSON
+                        </button>
+                    </div>
+
+                    <div class="border border-slate-200 rounded-xl p-4 space-y-3 bg-slate-50">
+                        <h4 class="text-xs font-bold text-slate-800 uppercase">Importa Backup Dati (JSON)</h4>
+                        <p class="text-[11px] text-slate-500">Carica un file JSON salvato in precedenza per ripristinare il grigliato.</p>
+                        <input type="file" id="import-json-input" accept=".json" onchange="importJSONBackup(event)" class="hidden">
+                        <button onclick="document.getElementById('import-json-input').click()" class="w-full py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold rounded-lg transition-all">
+                            Seleziona File e Ripristina
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal Azzeramento Settimanale -->
+    <div id="reset-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4 border border-slate-200">
+            <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto shadow-inner">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            </div>
+            <div class="text-center">
+                <h3 class="text-base font-black text-slate-900">CONFERMA AZZERAMENTO SETTIMANALE</h3>
+                <p class="text-xs text-slate-600 mt-1 leading-relaxed">
+                    Sei sicuro di voler resettare il grigliato della lavanderia? Verranno cancellati <strong class="text-red-600">TUTTI I DATI INSERITI</strong> per la settimana corrente.
+                </p>
+            </div>
+
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2 text-xs text-amber-900">
+                <input type="checkbox" id="check-download-backup" checked class="mt-0.5 rounded text-amber-600 focus:ring-amber-500">
+                <label for="check-download-backup" class="font-semibold cursor-pointer select-none">
+                    Scarica automaticamente un backup Excel (.xlsx) prima di procedere.
+                </label>
+            </div>
+
+            <div class="flex items-center gap-2 pt-2">
+                <button onclick="closeResetModal()" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all">Annulla</button>
+                <button onclick="confirmWeeklyReset()" class="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-black rounded-xl shadow transition-all">RESETTA TOTALE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Elimina Record Singolo -->
+    <div id="delete-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-sm w-full p-5 shadow-2xl space-y-3">
+            <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </div>
+            <div class="text-center">
+                <h3 class="text-sm font-bold text-slate-900">Elimina Record</h3>
+                <p class="text-xs text-slate-500 mt-1">Eliminare la registrazione dell'Allievo <span id="delete-user-name" class="font-bold text-slate-800"></span>?</p>
+            </div>
+            <div class="flex items-center gap-2 pt-2">
+                <button onclick="closeDeleteModal()" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-all">Annulla</button>
+                <button id="confirm-delete-btn" class="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg shadow transition-all">Elimina</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logica JavaScript Autonoma Ad Avvio Istantaneo (LocalStorage + Multi-tab Sync) -->
+    <script>
+        // ELENCO COMPLETO DEI 101 ALLIEVI MARESCIALLI - 28° CORSO PG ALBATROS A
+        const ALLIEVI_ALBATROS_A = [
+            { cod: "A01", cognome: "ACCOGLI", nome: "DANIELE" },
+            { cod: "A02", cognome: "AFFUSO", nome: "VALERIO" },
+            { cod: "A03", cognome: "AMOGUIS", nome: "BERNARD FABABAER" },
+            { cod: "A04", cognome: "ANDREOZZI", nome: "SALVATORE" },
+            { cod: "A06", cognome: "BALDARI", nome: "LORENZO" },
+            { cod: "A07", cognome: "BIANCHINI", nome: "LUCA" },
+            { cod: "A08", cognome: "BIANCO", nome: "LUCA" },
+            { cod: "A09", cognome: "BIASI", nome: "NICOLO DIONISIO" },
+            { cod: "A10", cognome: "MONTINARI", nome: "LORENZO" },
+            { cod: "A11", cognome: "CAFUERI", nome: "RICCARDO" },
+            { cod: "A13", cognome: "CAIAZZO", nome: "VITTORIO" },
+            { cod: "A15", cognome: "CANNONE", nome: "MARTINA" },
+            { cod: "A16", cognome: "CANU", nome: "NICOLO" },
+            { cod: "A19", cognome: "CARIA", nome: "FEDERICA" },
+            { cod: "A20", cognome: "CARLI", nome: "LEONARDO" },
+            { cod: "A22", cognome: "CHIANESE", nome: "DANIELE" },
+            { cod: "A25", cognome: "CIURO", nome: "DAVIDE" },
+            { cod: "A26", cognome: "CONTI", nome: "FRANCESCO" },
+            { cod: "A27", cognome: "CONVERTINI", nome: "GIOVANNI" },
+            { cod: "A28", cognome: "CORELLI", nome: "LUCA" },
+            { cod: "A29", cognome: "CORTESE", nome: "ADRIANO" },
+            { cod: "A30", cognome: "CRESTANI", nome: "FEDERICO" },
+            { cod: "A31", cognome: "CURCIO", nome: "PAOLO" },
+            { cod: "A34", cognome: "D'ALTERIO", nome: "SALVATORE" },
+            { cod: "A38", cognome: "D'ALOISO", nome: "CHRISTIAN" },
+            { cod: "A39", cognome: "DAVINO", nome: "MATTEO" },
+            { cod: "A40", cognome: "DE PASQUALE", nome: "MARCO" },
+            { cod: "A41", cognome: "DE SALVO", nome: "CORINNE" },
+            { cod: "A43", cognome: "DELLI CARRI", nome: "MARCO PIO" },
+            { cod: "A44", cognome: "DI BUO'", nome: "FEDERICO" },
+            { cod: "A45", cognome: "DI PALO", nome: "PASQUALE" },
+            { cod: "A46", cognome: "DI GIACOMO", nome: "GIOVANNI" },
+            { cod: "A48", cognome: "DONGIOVANNI", nome: "FRANCESCA GIADA" },
+            { cod: "A49", cognome: "DRAGO", nome: "SAMUELE" },
+            { cod: "A51", cognome: "FALCO", nome: "BIAGIO" },
+            { cod: "A52", cognome: "FEDELE", nome: "LEONARDO" },
+            { cod: "A53", cognome: "FIORELLA", nome: "LORENZO" },
+            { cod: "A54", cognome: "FIORETTO", nome: "LUIGI" },
+            { cod: "A55", cognome: "GERVASIO", nome: "FRANCESCO" },
+            { cod: "A58", cognome: "INDELICATO", nome: "GIORGIO" },
+            { cod: "A59", cognome: "IOZZIA", nome: "ORAZIO" },
+            { cod: "A61", cognome: "LA SPINA", nome: "CARMELO SIMONE" },
+            { cod: "A62", cognome: "LA TORRE", nome: "JOSEPH" },
+            { cod: "A63", cognome: "LAVENEZIANA", nome: "ELISABETTA" },
+            { cod: "A64", cognome: "LENGUA", nome: "CARMINE ANDREA" },
+            { cod: "A65", cognome: "LENTI", nome: "FRANCESCO" },
+            { cod: "A66", cognome: "LEPORE", nome: "LORENZA" },
+            { cod: "A69", cognome: "LIMONE", nome: "ALFONSO ALESSANDRO" },
+            { cod: "A70", cognome: "LO CRICCHIO", nome: "EMANUELA" },
+            { cod: "A72", cognome: "LONGO", nome: "FRANCESCO" },
+            { cod: "A73", cognome: "LOSITO", nome: "ANTONIO" },
+            { cod: "A74", cognome: "MAGLIO", nome: "LORENZO" },
+            { cod: "A75", cognome: "MAIDA", nome: "GAETANO MARIA" },
+            { cod: "A76", cognome: "MALORGIO", nome: "GIOVANNI" },
+            { cod: "A77", cognome: "MANCA", nome: "RAFFAELE" },
+            { cod: "A79", cognome: "MARIANO", nome: "NICOLO" },
+            { cod: "A80", cognome: "MARIANO", nome: "COSTANZA" },
+            { cod: "A81", cognome: "MARRANDINO", nome: "ROMINA" },
+            { cod: "A82", cognome: "MASSA", nome: "MATTEO" },
+            { cod: "A84", cognome: "MAZZONE", nome: "FRANCESCO SAVERIO" },
+            { cod: "A85", cognome: "MELAI", nome: "LEONARDO" },
+            { cod: "A86", cognome: "MENNILLO", nome: "ANTONIO" },
+            { cod: "A88", cognome: "MILILLO", nome: "LAURA" },
+            { cod: "A92", cognome: "NIGRO", nome: "DIEGO" },
+            { cod: "A93", cognome: "NOTARANGELO", nome: "MICHELE PIO" },
+            { cod: "A95", cognome: "PALMIERI", nome: "FRANCESCA" },
+            { cod: "A96", cognome: "PASCARELLA", nome: "CATERINA" },
+            { cod: "A99", cognome: "PICCIONE", nome: "ANDREA" },
+            { cod: "A100", cognome: "QUARANTA", nome: "GIOVANNI" },
+            { cod: "A102", cognome: "QUADRINI", nome: "CARLO ALBERTO" },
+            { cod: "A103", cognome: "RANDAZZO", nome: "SILVIA" },
+            { cod: "A104", cognome: "ROLLI", nome: "EMANUELE" },
+            { cod: "A105", cognome: "ROLLO", nome: "ALBERTO" },
+            { cod: "A106", cognome: "ROMANO", nome: "CRISTIAN" },
+            { cod: "A108", cognome: "ROSATI", nome: "TOMMASO" },
+            { cod: "A110", cognome: "RUSSO", nome: "MATTIA" },
+            { cod: "A111", cognome: "SANTO", nome: "IVAN" },
+            { cod: "A112", cognome: "SARACINO", nome: "DANIELA" },
+            { cod: "A114", cognome: "SCAVUZZO", nome: "GIOELE" },
+            { cod: "A115", cognome: "SCIACCA", nome: "MARCO" },
+            { cod: "A117", cognome: "SCIARRILLO", nome: "ANTONIO MARIA" },
+            { cod: "A118", cognome: "SERENO", nome: "ANDREA" },
+            { cod: "A121", cognome: "SERRANO VASCO", nome: "SIMON" },
+            { cod: "A122", cognome: "TAVILLA", nome: "STEFANO" },
+            { cod: "A124", cognome: "TROLLI", nome: "TIZIANO GIUSEPPE" },
+            { cod: "A134", cognome: "ANTONICELLI", nome: "GIOVANNI" },
+            { cod: "A138", cognome: "CIAMPICOTTO", nome: "ANDREA" },
+            { cod: "A141", cognome: "DE LUCA", nome: "FEDERICA" },
+            { cod: "A142", cognome: "DI NANNO", nome: "ANDREA" },
+            { cod: "A143", cognome: "GIULIO", nome: "GABRIELE" },
+            { cod: "A144", cognome: "KIM", nome: "DAVIDE" },
+            { cod: "A145", cognome: "LO CASCIO", nome: "MARTINA" },
+            { cod: "A146", cognome: "MANTERO", nome: "LARA" },
+            { cod: "A147", cognome: "MASSA", nome: "MARTINA" },
+            { cod: "A150", cognome: "ROMAGNO", nome: "VITO MATTIA" },
+            { cod: "A155", cognome: "MUSERRA", nome: "FRANCESCO" },
+            { cod: "A156", cognome: "PASCALE", nome: "ANGELICA" },
+            { cod: "A157", cognome: "GIORDANO", nome: "ANGELICA" },
+            { cod: "B157", cognome: "GHEZZI", nome: "FRANCESCO" },
+            { cod: "B165", cognome: "SAGLIOCCO", nome: "ANTONIO" },
+            { cod: "B172", cognome: "MARINO", nome: "ROMUALDO" }
+        ];
+
+        // ELENCO COMPLETO CAPI E LIMITI MATRICE ALBATROS A
+        const ITEMS_PEZZO = [
+            { id: "bustina_invernale", label: "Bustina Invernale", max: 1 },
+            { id: "bustina_estiva", label: "Bustina Estiva", max: 1 },
+            { id: "maglione_collo_r_pile", label: "Maglione Lana Collo R/Pile Verde", max: 1 },
+            { id: "maglione_ga_v", label: "Maglione Lana G.A. a \"V\"", max: 2 },
+            { id: "pantaloni_invernali", label: "Pantaloni Invernali", max: 1 },
+            { id: "pantaloni_estivi", label: "Pantaloni Estivi", max: 1 },
+            { id: "camicia_maniche_lunghe", label: "Camicia M.L.", max: 2 },
+            { id: "camicia_maniche_corte", label: "Camicia M.C.", max: 2 },
+            { id: "camicia_bianca", label: "Camicia Bianca", max: 1 },
+            { id: "giubbetto_intermedio", label: "Giubbetto Stagione Intermedia", max: 1 },
+            { id: "giacca_invernale", label: "Giacca Invernale", max: 1 },
+            { id: "giacca_estiva", label: "Giacca Estiva", max: 1 },
+            { id: "gonna_invernale", label: "Gonna Invernale", max: 1 },
+            { id: "gonna_estiva", label: "Gonna Estiva", max: 1 },
+            { id: "casacca_infermiere", label: "Casacca Bianca Infermiere", max: 1 },
+            { id: "pantalone_infermiere", label: "Pantalone Bianco Infermiere", max: 1 },
+            { id: "tuta_sportiva", label: "Tuta Sportiva", max: 1 },
+            { id: "soprabito_impermeabile", label: "Soprabito Impermeabile", max: 1 },
+            { id: "sopravvestito_policromo", label: "Sopravvestito Policromo Vegetato", max: 1 }
+        ];
+
+        const ITEMS_PESO = [
+            { id: "accappatoio", label: "Accappatoio", max: 1 },
+            { id: "asciugamani", label: "Asciugamani", max: 1 },
+            { id: "slip", label: "Slip", max: 10 },
+            { id: "reggiseno", label: "Reggiseno", max: 7 },
+            { id: "calze_lana_kaki", label: "Calze Lana Verde Kaki", max: 6 },
+            { id: "canottiera_oliva_polo", label: "Canottiera Verde Oliva M.M./Polo", max: 6 },
+            { id: "uniforme_combattimento", label: "Uniforme da Combattimento", max: 1 },
+            { id: "pigiama_invernale", label: "Pigiama Invernale", max: 1 },
+            { id: "pigiama_estivo", label: "Pigiama Estivo", max: 1 },
+            { id: "maglietta_sportiva_mc", label: "Maglietta Sportiva M.C.", max: 4 },
+            { id: "maglietta_sportiva_ml", label: "Maglietta Sportiva M.L.", max: 4 },
+            { id: "pantaloncini_sportivi", label: "Pantaloncini Sportivi", max: 4 },
+            { id: "calze_bianche_ginnica", label: "Calze Bianche Lana Attività Ginnica", max: 4 },
+            { id: "calze_cotone_nere", label: "Calze Cotone Nere", max: 6 },
+            { id: "canottiera_intima_bianca", label: "Canottiera Intima Cotone Bianca", max: 2 },
+            { id: "maglia_intima_ml", label: "Maglia Intima Maniche Lunghe", max: 1 },
+            { id: "uose", label: "Uose", max: 1 },
+            { id: "guanti_cotone_bianchi", label: "Guanti Cotone Bianchi", max: 1 },
+            { id: "tracollo_spallaccio", label: "Tracollo Spallaccio", max: 1 },
+            { id: "cravatta", label: "Cravatta", max: 1 },
+            { id: "costume_bagno", label: "Costume da Bagno", max: 1 },
+            { id: "calze_collant", label: "Calze Collant", max: 1 },
+            { id: "mutande_lana_lunghe", label: "Mutande di Lana Lunghe", max: 1 }
+        ];
+
+        const ALL_ITEMS_MAP = {};
+        [...ITEMS_PEZZO, ...ITEMS_PESO].forEach(i => ALL_ITEMS_MAP[i.id] = i);
+
+        const STORAGE_KEY = "am_grigliato_lavanderia_28_albatros_v1";
+
+        let records = [];
+        let editingDocId = null;
+        let activeCategoryFilter = 'all';
+
+        const itemValues = {};
+        [...ITEMS_PEZZO, ...ITEMS_PESO].forEach(i => itemValues[i.id] = 0);
+
+        let sharedVersion = null;
+        let saving = false;
+        let loading = false;
+        function syncStatus(text) { document.getElementById('sync-status').textContent = text; }
+        function applyShared(state) {
+            records = state.records;
+            sharedVersion = state.version;
+            renderTable();
+            updateTopStats();
+            syncStatus('Grigliato condiviso · aggiornato ' + new Date(state.updatedAt).toLocaleString('it-IT'));
+        }
+        window.addEventListener('DOMContentLoaded', () => {
+            populateStudentDropdown();
+            renderFormInputs();
+            renderTableHeaderCols();
+            renderTable();
+            loadSharedData();
+            setInterval(() => { if (!document.hidden) loadSharedData(); }, 5000);
+            window.addEventListener('focus', () => loadSharedData());
+        });
+        async function loadSharedData() {
+            if (saving || loading) return false;
+            loading = true;
+            try {
+                const response = await fetch('/api/laundry', { cache: 'no-store' });
+                if (!response.ok) throw new Error();
+                applyShared(await response.json());
+                return true;
+            } catch {
+                syncStatus('Connessione assente: aggiornamento e download non disponibili. Riprova.');
+                return false;
+            } finally { loading = false; }
+        }
+        async function saveSharedData(nextRecords) {
+            if (saving || loading || sharedVersion === null) {
+                showToast('Attendi il caricamento del grigliato condiviso e riprova.', 'error');
+                return false;
+            }
+            saving = true;
+            syncStatus('Salvataggio in corso…');
+            try {
+                const response = await fetch('/api/laundry', {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ records: nextRecords, version: sharedVersion })
+                });
+                const state = await response.json();
+                if (!response.ok) {
+                    if (response.status === 409) {
+                        const latest = await fetch('/api/laundry', { cache: 'no-store' });
+                        if (latest.ok) applyShared(await latest.json());
+                    }
+                    throw new Error(state.error || 'Salvataggio non riuscito. Riprova.');
+                }
+                applyShared(state);
+                return true;
+            } catch (error) {
+                syncStatus('Modifiche non salvate. Riprova il salvataggio.');
+                showToast(error.message || 'Salvataggio non riuscito. Riprova.', 'error');
+                return false;
+            } finally { saving = false; }
+        }
+        function escapeHTML(value) {
+            return String(value || '').replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]));
+        }
+        async function importPreviousBrowserData() {
+            try {
+                const previous = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                if (!previous.length) return showToast('Nessun dato precedente presente in questo browser.', 'info');
+                if (await saveSharedData(previous)) showToast('Dati del browser pubblicati nel grigliato condiviso.');
+            } catch { showToast('Impossibile recuperare i dati precedenti.', 'error'); }
+        }
+
+        function updateTopStats() {
+            const countEl = document.getElementById('stat-inserted-count');
+            const totalItemsEl = document.getElementById('stat-total-items');
+
+            if (countEl) countEl.textContent = records.length;
+
+            let totalItemsSum = 0;
+            records.forEach(r => totalItemsSum += (r.totale_complessivo || 0));
+            if (totalItemsEl) totalItemsEl.textContent = totalItemsSum;
+        }
+
+        function populateStudentDropdown() {
+            const select = document.getElementById('select-student');
+            ALLIEVI_ALBATROS_A.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.cod;
+                opt.textContent = `${s.cod} - ${s.cognome} ${s.nome}`.trim();
+                select.appendChild(opt);
+            });
+        }
+
+        function onStudentSelect(cod) {
+            document.getElementById('input-cod').value = cod;
+            onStudentCodeInput(cod);
+        }
+
+        function onStudentCodeInput(cod) {
+            const normalizedCode = cod.trim().toUpperCase();
+            const student = ALLIEVI_ALBATROS_A.find(s => s.cod === normalizedCode);
+            document.getElementById('select-student').value = student ? student.cod : '';
+            document.getElementById('input-cognome').value = student ? student.cognome : '';
+            document.getElementById('input-nome').value = student ? student.nome : '';
+            document.getElementById('input-cod').setCustomValidity(
+                normalizedCode && !student ? "Codice allievo non presente nell'elenco." : ''
+            );
+        }
+
+        function renderFormInputs() {
+            const gridPezzo = document.getElementById('grid-pezzo');
+            const gridPeso = document.getElementById('grid-peso');
+
+            gridPezzo.innerHTML = ITEMS_PEZZO.map(item => createItemCardHtml(item, 'pezzo')).join('');
+            gridPeso.innerHTML = ITEMS_PESO.map(item => createItemCardHtml(item, 'peso')).join('');
+
+            updateSummary();
+        }
+
+        function createItemCardHtml(item, type) {
+            const isPezzo = type === 'pezzo';
+            const borderHover = isPezzo ? 'hover:border-blue-400' : 'hover:border-teal-400';
+
+            return `
+                <div id="card-item-${item.id}" data-item-id="${item.id}" data-type="${type}" data-label="${item.label.toLowerCase()}" 
+                    class="item-card bg-slate-50 border border-slate-200 rounded-lg p-2.5 flex flex-col justify-between transition-all ${borderHover}">
+                    
+                    <div class="flex items-start justify-between gap-1 mb-1">
+                        <div class="flex-1">
+                            <label class="text-xs font-extrabold text-slate-800 leading-tight cursor-pointer select-none block" onclick="stepCount('${item.id}', 1)">
+                                ${item.label}
+                            </label>
+                        </div>
+                        <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 shrink-0">
+                            MAX ${item.max}
+                        </span>
+                    </div>
+
+                    <div class="flex items-center gap-1.5 mt-1.5">
+                        <button type="button" onclick="stepCount('${item.id}', -1)" 
+                            class="w-7 h-7 rounded bg-white border border-slate-300 text-slate-800 font-black text-sm hover:bg-slate-100 active:scale-95 flex items-center justify-center shrink-0 shadow-sm select-none">
+                            -
+                        </button>
+                        
+                        <input type="number" id="input-num-${item.id}" value="0" min="0" max="${item.max}" onchange="setItemCount('${item.id}', this.value)"
+                            class="w-full h-7 text-center bg-white border border-slate-300 rounded text-xs font-black text-slate-900 focus:outline-none focus:ring-1 ${isPezzo ? 'focus:ring-blue-600' : 'focus:ring-teal-600'}">
+                        
+                        <button type="button" onclick="stepCount('${item.id}', 1)" 
+                            class="w-7 h-7 rounded ${isPezzo ? 'bg-am-navy hover:bg-blue-900' : 'bg-teal-800 hover:bg-teal-700'} text-white font-black text-sm active:scale-95 flex items-center justify-center shrink-0 shadow-sm select-none">
+                            +
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function stepCount(itemId, delta) {
+            const item = ALL_ITEMS_MAP[itemId];
+            if (!item) return;
+
+            const current = itemValues[itemId] || 0;
+            let updated = current + delta;
+
+            if (updated < 0) updated = 0;
+            if (updated > item.max) {
+                showToast(`Limite massimo di ${item.max} per ${item.label}`, 'info');
+                updated = item.max;
+            }
+
+            setItemCount(itemId, updated);
+        }
+
+        function setItemCount(itemId, value) {
+            const item = ALL_ITEMS_MAP[itemId];
+            if (!item) return;
+
+            let val = parseInt(value) || 0;
+            if (val < 0) val = 0;
+            if (val > item.max) {
+                showToast(`Non puoi superare il massimo di ${item.max} per ${item.label}`, 'error');
+                val = item.max;
+            }
+
+            itemValues[itemId] = val;
+
+            const inputEl = document.getElementById(`input-num-${itemId}`);
+            if (inputEl && parseInt(inputEl.value) !== val) {
+                inputEl.value = val;
+            }
+
+            const cardEl = document.getElementById(`card-item-${itemId}`);
+            const isPezzo = ITEMS_PEZZO.some(i => i.id === itemId);
+
+            if (cardEl) {
+                if (val > 0) {
+                    cardEl.classList.add(isPezzo ? 'bg-blue-50' : 'bg-teal-50', isPezzo ? 'border-blue-400' : 'border-teal-400');
+                    cardEl.classList.remove('bg-slate-50', 'border-slate-200');
+                } else {
+                    cardEl.classList.remove('bg-blue-50', 'bg-teal-50', 'border-blue-400', 'border-teal-400');
+                    cardEl.classList.add('bg-slate-50', 'border-slate-200');
+                }
+            }
+
+            updateSummary();
+        }
+
+        function updateSummary() {
+            let totPezzo = 0;
+            let totPeso = 0;
+            let countSelected = 0;
+
+            ITEMS_PEZZO.forEach(item => {
+                const v = itemValues[item.id] || 0;
+                totPezzo += v;
+                if (v > 0) countSelected++;
+            });
+
+            ITEMS_PESO.forEach(item => {
+                const v = itemValues[item.id] || 0;
+                totPeso += v;
+                if (v > 0) countSelected++;
+            });
+
+            document.getElementById('badge-tot-pezzo').textContent = `Totale Pezzo: ${totPezzo}`;
+            document.getElementById('badge-tot-peso').textContent = `Totale Peso: ${totPeso}`;
+
+            document.getElementById('summary-pezzo-count').textContent = totPezzo;
+            document.getElementById('summary-peso-count').textContent = totPeso;
+            document.getElementById('summary-grand-total').textContent = totPezzo + totPeso;
+
+            document.getElementById('count-selected-badge').textContent = countSelected;
+
+            if (activeCategoryFilter === 'selected') {
+                filterFormItems();
+            }
+        }
+
+        function filterFormItems() {
+            const query = (document.getElementById('search-items-input').value || '').toLowerCase();
+            const cards = document.querySelectorAll('.item-card');
+
+            let pezzoVisible = 0;
+            let pesoVisible = 0;
+
+            cards.forEach(card => {
+                const label = card.getAttribute('data-label');
+                const type = card.getAttribute('data-type');
+                const itemId = card.getAttribute('data-item-id');
+                const val = itemValues[itemId] || 0;
+
+                let matchesSearch = label.includes(query);
+                let matchesCategory = true;
+
+                if (activeCategoryFilter === 'pezzo') matchesCategory = (type === 'pezzo');
+                else if (activeCategoryFilter === 'peso') matchesCategory = (type === 'peso');
+                else if (activeCategoryFilter === 'selected') matchesCategory = (val > 0);
+
+                if (matchesSearch && matchesCategory) {
+                    card.classList.remove('hidden');
+                    if (type === 'pezzo') pezzoVisible++;
+                    if (type === 'peso') pesoVisible++;
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+
+            document.getElementById('section-pezzo-container').style.display = (pezzoVisible > 0 || activeCategoryFilter === 'all' || activeCategoryFilter === 'pezzo') ? 'block' : 'none';
+            document.getElementById('section-peso-container').style.display = (pesoVisible > 0 || activeCategoryFilter === 'all' || activeCategoryFilter === 'peso') ? 'block' : 'none';
+        }
+
+        function setCategoryFilter(category) {
+            activeCategoryFilter = category;
+
+            ['all', 'pezzo', 'peso', 'selected'].forEach(cat => {
+                const btn = document.getElementById(`filter-${cat}`);
+                if (btn) {
+                    if (cat === category) {
+                        btn.className = "px-2.5 py-1 rounded-md font-bold bg-slate-900 text-white shadow-sm whitespace-nowrap";
+                    } else {
+                        btn.className = "px-2.5 py-1 rounded-md font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 whitespace-nowrap";
+                    }
+                }
+            });
+
+            filterFormItems();
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+
+            const cod = document.getElementById('input-cod').value.trim().toUpperCase();
+            const student = ALLIEVI_ALBATROS_A.find(s => s.cod === cod);
+
+            if (!student) {
+                showToast("Inserire un codice allievo valido o selezionare un allievo dall'elenco.", "error");
+                return;
+            }
+
+            const { cognome, nome } = student;
+
+            const pezzoData = {};
+            let totPezzo = 0;
+            ITEMS_PEZZO.forEach(item => {
+                const val = itemValues[item.id] || 0;
+                pezzoData[item.id] = val;
+                totPezzo += val;
+            });
+
+            const pesoData = {};
+            let totPeso = 0;
+            ITEMS_PESO.forEach(item => {
+                const val = itemValues[item.id] || 0;
+                pesoData[item.id] = val;
+                totPeso += val;
+            });
+
+            const newRecord = {
+                id: editingDocId || ('rec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)),
+                cod,
+                cognome,
+                nome,
+                pezzo: pezzoData,
+                peso: pesoData,
+                totale_pezzo: totPezzo,
+                totale_peso: totPeso,
+                totale_complessivo: totPezzo + totPeso,
+                timestamp: Date.now()
+            };
+
+            const nextRecords = records.filter(r => r.id !== editingDocId && r.cod !== cod);
+            nextRecords.push(newRecord);
+            if (!await saveSharedData(nextRecords)) return;
+            showToast('Grigliato salvato e disponibile per tutti.');
+            resetForm();
+            renderTable();
+            switchTab('table');
+        }
+
+        function resetForm() {
+            editingDocId = null;
+            document.getElementById('laundry-form').reset();
+            onStudentCodeInput('');
+            document.getElementById('select-student').value = '';
+            document.getElementById('submit-btn-text').textContent = "REGISTRA GRIGLIATO";
+
+            [...ITEMS_PEZZO, ...ITEMS_PESO].forEach(item => {
+                setItemCount(item.id, 0);
+            });
+
+            document.getElementById('search-items-input').value = '';
+            setCategoryFilter('all');
+        }
+
+        function renderTableHeaderCols() {
+            const tr = document.getElementById('table-header-cols');
+            let html = `
+                <th class="sticky-col-1 w-12">COD</th>
+                <th class="sticky-col-2 w-28">COGNOME</th>
+                <th class="sticky-col-3 w-28">NOME</th>
+            `;
+
+            ITEMS_PEZZO.forEach(item => {
+                html += `<th class="w-14 text-[9px] bg-blue-900 text-white" title="${item.label}">${compactLabel(item.label)}</th>`;
+            });
+
+            ITEMS_PESO.forEach(item => {
+                html += `<th class="w-14 text-[9px] bg-teal-900 text-white" title="${item.label}">${compactLabel(item.label)}</th>`;
+            });
+
+            html += `
+                <th class="w-16 bg-blue-950 text-blue-300 font-black">PEZZO</th>
+                <th class="w-16 bg-teal-950 text-teal-300 font-black">PESO</th>
+                <th class="w-20 bg-amber-500 text-slate-950 font-black">TOTALE</th>
+                <th class="w-16">AZIONI</th>
+            `;
+
+            tr.innerHTML = html;
+        }
+
+        function compactLabel(label) {
+            return label
+                .replace("Bustina Invernale", "BUST. INV")
+                .replace("Bustina Estiva", "BUST. EST")
+                .replace("Maglione Lana Collo R/Pile Verde", "MAGL. PILE")
+                .replace("Maglione Lana G.A. a \"V\"", "MAGL. V")
+                .replace("Pantaloni Invernali", "PANT. INV")
+                .replace("Pantaloni Estivi", "PANT. EST")
+                .replace("Giubbetto Stagione Intermedia", "GIUBB. INT")
+                .replace("Casacca Bianca Infermiere", "CASAC. INF")
+                .replace("Pantalone Bianco Infermiere", "PANT. INF")
+                .replace("Sopravvestito Policromo Vegetato", "SOPRAVV. VEG")
+                .replace("Canottiera Verde Oliva M.M./Polo", "CANOTT. OLIVA")
+                .replace("Calze Bianche Lana Attività Ginnica", "CALZE GINN")
+                .replace("Canottiera Intima Cotone Bianca", "CANOTT. BIA")
+                .replace("Maglia Intima Maniche Lunghe", "MAGL. INTIMA");
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            const tfoot = document.getElementById('table-footer');
+            const search = (document.getElementById('table-search-input').value || '').toLowerCase();
+            const sortMode = document.getElementById('sort-select').value;
+
+            let filtered = records.filter(r => {
+                const cod = (r.cod || '').toLowerCase();
+                const cognome = (r.cognome || '').toLowerCase();
+                const nome = (r.nome || '').toLowerCase();
+                return cod.includes(search) || cognome.includes(search) || nome.includes(search);
+            });
+
+            filtered.sort((a, b) => {
+                if (sortMode === 'cod_asc') {
+                    return (a.cod || '').localeCompare(b.cod || '', undefined, { numeric: true });
+                } else if (sortMode === 'cognome_asc') {
+                    return (a.cognome || '').localeCompare(b.cognome || '');
+                } else {
+                    return (b.timestamp || 0) - (a.timestamp || 0);
+                }
+            });
+
+            document.getElementById('badge-total-records').textContent = records.length;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="48" class="text-center py-8 text-slate-400 bg-slate-50 italic font-medium">
+                            Nessun allievo registrato nel grigliato per la settimana corrente.
+                        </td>
+                    </tr>
+                `;
+                tfoot.innerHTML = '';
+                return;
+            }
+
+            const colTotalsPezzo = {};
+            ITEMS_PEZZO.forEach(item => colTotalsPezzo[item.id] = 0);
+
+            const colTotalsPeso = {};
+            ITEMS_PESO.forEach(item => colTotalsPeso[item.id] = 0);
+
+            let sumTotPezzo = 0;
+            let sumTotPeso = 0;
+            let grandSum = 0;
+
+            let html = '';
+
+            filtered.forEach((r, idx) => {
+                let rowPezzoTot = 0;
+                let rowPesoTot = 0;
+
+                let pezzoCells = '';
+                ITEMS_PEZZO.forEach(item => {
+                    const val = (r.pezzo && r.pezzo[item.id]) ? parseInt(r.pezzo[item.id]) : 0;
+                    colTotalsPezzo[item.id] += val;
+                    rowPezzoTot += val;
+                    pezzoCells += `<td class="text-center font-mono ${val > 0 ? 'bg-blue-50/70 text-blue-900 font-black' : 'text-slate-300'}">${val > 0 ? val : '-'}</td>`;
+                });
+
+                let pesoCells = '';
+                ITEMS_PESO.forEach(item => {
+                    const val = (r.peso && r.peso[item.id]) ? parseInt(r.peso[item.id]) : 0;
+                    colTotalsPeso[item.id] += val;
+                    rowPesoTot += val;
+                    pesoCells += `<td class="text-center font-mono ${val > 0 ? 'bg-teal-50/70 text-teal-900 font-black' : 'text-slate-300'}">${val > 0 ? val : '-'}</td>`;
+                });
+
+                const rowGrandTot = rowPezzoTot + rowPesoTot;
+                sumTotPezzo += rowPezzoTot;
+                sumTotPeso += rowPesoTot;
+                grandSum += rowGrandTot;
+
+                const bgRow = idx % 2 === 0 ? 'bg-white' : 'bg-slate-50';
+
+                html += `
+                    <tr class="${bgRow}">
+                        <td class="sticky-col-1 font-mono font-bold text-slate-900 text-center">${escapeHTML(r.cod)}</td>
+                        <td class="sticky-col-2 font-bold text-slate-900 uppercase">${escapeHTML(r.cognome)}</td>
+                        <td class="sticky-col-3 font-semibold text-slate-900 uppercase">${escapeHTML(r.nome)}</td>
+                        ${pezzoCells}
+                        ${pesoCells}
+                        <td class="text-center font-mono font-black bg-blue-100/60 text-blue-950">${rowPezzoTot}</td>
+                        <td class="text-center font-mono font-black bg-teal-100/60 text-teal-950">${rowPesoTot}</td>
+                        <td class="text-center font-mono font-black bg-amber-200 text-amber-950">${rowGrandTot}</td>
+                        <td class="text-center">
+                            <div class="flex items-center justify-center gap-1">
+                                <button onclick="editRecord('${r.id}')" title="Modifica" class="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-blue-50">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                </button>
+                                <button onclick="promptDeleteRecord('${r.id}', '')" title="Elimina" class="p-1 rounded text-slate-500 hover:text-red-600 hover:bg-red-50">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+
+            let footerPezzo = '';
+            ITEMS_PEZZO.forEach(item => {
+                footerPezzo += `<td class="text-center font-mono text-blue-300 font-bold">${colTotalsPezzo[item.id]}</td>`;
+            });
+
+            let footerPeso = '';
+            ITEMS_PESO.forEach(item => {
+                footerPeso += `<td class="text-center font-mono text-teal-300 font-bold">${colTotalsPeso[item.id]}</td>`;
+            });
+
+            tfoot.innerHTML = `
+                <tr>
+                    <td colspan="3" class="text-right font-black text-amber-400 uppercase px-2 text-[10px]">TOTALI CORSO ALBATROS A:</td>
+                    ${footerPezzo}
+                    ${footerPeso}
+                    <td class="text-center font-mono text-blue-200 text-xs font-black">${sumTotPezzo}</td>
+                    <td class="text-center font-mono text-teal-200 text-xs font-black">${sumTotPeso}</td>
+                    <td class="text-center font-mono text-amber-400 text-xs font-black bg-amber-500/20">${grandSum}</td>
+                    <td></td>
+                </tr>
+            `;
+        }
+
+        function editRecord(id) {
+            const record = records.find(r => r.id === id);
+            if (!record) return;
+
+            editingDocId = id;
+
+            onStudentSelect(record.cod || '');
+
+            ITEMS_PEZZO.forEach(item => {
+                const val = (record.pezzo && record.pezzo[item.id]) ? parseInt(record.pezzo[item.id]) : 0;
+                setItemCount(item.id, val);
+            });
+
+            ITEMS_PESO.forEach(item => {
+                const val = (record.peso && record.peso[item.id]) ? parseInt(record.peso[item.id]) : 0;
+                setItemCount(item.id, val);
+            });
+
+            document.getElementById('submit-btn-text').textContent = "AGGIORNA GRIGLIATO";
+            switchTab('form');
+            showToast("Modalità modifica attiva per l'Allievo.", "info");
+        }
+
+        let pendingDeleteId = null;
+
+        function promptDeleteRecord(id, userName) {
+            pendingDeleteId = id;
+            document.getElementById('delete-user-name').textContent = records.find(r => r.id === id)?.cognome || userName;
+            document.getElementById('delete-modal').classList.remove('hidden');
+
+            document.getElementById('confirm-delete-btn').onclick = async () => {
+                if (!pendingDeleteId) return;
+                if (!await saveSharedData(records.filter(r => r.id !== pendingDeleteId))) return;
+                renderTable();
+                showToast("Record eliminato.");
+                closeDeleteModal();
+            };
+        }
+
+        function closeDeleteModal() {
+            pendingDeleteId = null;
+            document.getElementById('delete-modal').classList.add('hidden');
+        }
+
+        function openResetModal() {
+            document.getElementById('reset-modal').classList.remove('hidden');
+        }
+
+        function closeResetModal() {
+            document.getElementById('reset-modal').classList.add('hidden');
+        }
+
+        async function confirmWeeklyReset() {
+            const downloadBackup = document.getElementById('check-download-backup').checked;
+
+            if (downloadBackup && records.length > 0) {
+                if (!await exportToExcel()) return;
+            }
+
+            if (!await saveSharedData([])) return;
+            renderTable();
+            resetForm();
+            closeResetModal();
+            showToast("AZZERAMENTO COMPLETATO: Il grigliato settimanale è stato resettato.");
+        }
+
+        // Download the latest shared data using the supplied Excel template.
+        async function exportToExcel() {
+            if (!await loadSharedData()) { showToast('Impossibile verificare gli ultimi dati. Riprova il download.', 'error'); return false; }
+            try {
+                const blob = await createLaundryWorkbook(records, ITEMS_PEZZO, ITEMS_PESO);
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `GRIGLIATO_LAVANDERIA_ALBATROS_A_${new Date().toISOString().split('T')[0]}.xlsx`;
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                showToast('Excel scaricato nel formato del modello, in ordine di codice.');
+                return true;
+            } catch (error) {
+                console.error('Errore esportazione Excel:', error);
+                showToast('Impossibile generare il modello Excel. Riprova il download.', 'error');
+                return false;
+            }
+        }
+
+        function exportJSONBackup() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(records, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `BACKUP_GRIGLIATO_28_ALBATROS_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast("Backup JSON scaricato.");
+        }
+
+        function importJSONBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (Array.isArray(imported)) {
+                        if (!await saveSharedData(imported)) return;
+                        renderTable();
+                        showToast("Dati ripristinati con successo dal backup!");
+                    } else {
+                        showToast("Formato del file di backup non valido.", "error");
+                    }
+                } catch (err) {
+                    showToast("Errore durante la lettura del file.", "error");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function switchTab(tab) {
+            const formView = document.getElementById('view-form');
+            const tableView = document.getElementById('view-table');
+            const manageView = document.getElementById('view-manage');
+
+            const formBtn = document.getElementById('tab-form-btn');
+            const tableBtn = document.getElementById('tab-table-btn');
+            const manageBtn = document.getElementById('tab-manage-btn');
+
+            [formView, tableView, manageView].forEach(v => v.classList.add('hidden'));
+
+            if (tab === 'form') {
+                formView.classList.remove('hidden');
+                formBtn.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow";
+                tableBtn.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300 hover:text-white";
+                manageBtn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300 hover:text-white";
+            } else if (tab === 'table') {
+                tableView.classList.remove('hidden');
+                tableBtn.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow";
+                formBtn.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300 hover:text-white";
+                manageBtn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300 hover:text-white";
+                renderTable();
+            } else {
+                manageView.classList.remove('hidden');
+                manageBtn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow";
+                formBtn.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300 hover:text-white";
+                tableBtn.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-300 hover:text-white";
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            let border = 'border-emerald-500';
+            if (type === 'error') border = 'border-red-500';
+            if (type === 'info') border = 'border-blue-500';
+
+            toast.className = `p-3 rounded-xl border-l-4 ${border} bg-slate-900 text-white text-xs font-bold shadow-2xl flex items-center justify-between gap-3 pointer-events-auto transition-all duration-300`;
+            toast.innerHTML = `
+                <span>${message}</span>
+                <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-white">&times;</button>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
